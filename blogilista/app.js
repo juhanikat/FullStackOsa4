@@ -6,7 +6,6 @@ require("dotenv").config()
 const express = require("express")
 const app = express()
 app.use(cors())
-app.use(express.json())
 
 const mongoUrl = process.env.MONGODB_URI
 mongoose.connect(mongoUrl)

@@ -1,7 +1,9 @@
 const mongoose = require("mongoose")
+const express = require("express")
 const Blog = require("../models/blog.js")
 const supertest = require("supertest")
 const app = require("../app.js")
+app.use(express.json())
 
 const api = supertest(app)
 
@@ -56,8 +58,9 @@ test("blogs can be added with post request", async () => {
 		url: "fake_url",
 		likes: 999
 	}
-	const postResponse = await api.post("/api/blogs", newBlog)
+	const postResponse = await api.post("/api/blogs").send(newBlog)
 	expect(postResponse.statusCode).toBe(201)
+
 
 	const getResponse = await api.get("/api/blogs")
 	expect(getResponse.statusCode).toBe(200)
@@ -71,9 +74,29 @@ test("blogs with no likes value have 0 likes", async () => {
 		url: "fake_url"
 	}
 
-	const response = await api.post("/api/blogs", newBlog)
+	const response = await api.post("/api/blogs").send(newBlog)
 	expect(response.body.likes).toBeDefined()
 	expect(response.body.likes).toBe(0)
+})
+
+test("blogs with no title or url get rejected", async () => {
+	const blogWithNoUrl = {
+		title: "hello",
+		author: "who knows",
+		likes: 2
+	}
+
+	let response = await api.post("/api/blogs").send(blogWithNoUrl)
+	expect(response.statusCode).toBe(400)
+
+	const blogWithNoTitle = {
+		author: "who knows",
+		url: "www.google.com",
+		likes: 2
+	}
+
+	response = await api.post("/api/blogs").send(blogWithNoTitle)
+	expect(response.statusCode).toBe(400)
 })
 
 afterAll(async () => {
