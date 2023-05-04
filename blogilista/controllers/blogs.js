@@ -13,10 +13,6 @@ blogsRouter.get("/", (request, response) => {
 })
 
 blogsRouter.post("/", (request, response) => {
-	console.log(request.body)
-	if (!(request.body.title) || !(request.body.url)) {
-		response.status(400).end()
-	}
 	if (!(request.body.likes)) {
 		request.body.likes = 0
 	}
