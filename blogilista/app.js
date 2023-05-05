@@ -7,10 +7,9 @@ const express = require("express")
 const app = express()
 app.use(cors())
 
+
 const mongoUrl = process.env.MONGODB_URI
 mongoose.connect(mongoUrl)
-
-
 
 app.use("/api/blogs", blogsRouter)
 
