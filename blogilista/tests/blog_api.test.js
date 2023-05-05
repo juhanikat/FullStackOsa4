@@ -66,38 +66,90 @@ test("blogs can be added with post request", async () => {
 	expect(getResponse.statusCode).toBe(200)
 	expect(getResponse.body).toHaveLength(initialBlogs.length + 1)
 })
+describe("blogs with no", () => {
+	test("likes value have 0 likes", async () => {
+		const newBlog = {
+			title: "test4",
+			author: "somebody else",
+			url: "fake_url"
+		}
 
-test("blogs with no likes value have 0 likes", async () => {
-	const newBlog = {
-		title: "test4",
-		author: "somebody else",
-		url: "fake_url"
-	}
+		const response = await api.post("/api/blogs").send(newBlog)
+		expect(response.body.likes).toBeDefined()
+		expect(response.body.likes).toBe(0)
+	})
 
-	const response = await api.post("/api/blogs").send(newBlog)
-	expect(response.body.likes).toBeDefined()
-	expect(response.body.likes).toBe(0)
+	test("title or url get rejected", async () => {
+		const blogWithNoUrl = {
+			title: "hello",
+			author: "who knows",
+			likes: 2
+		}
+
+		let response = await api.post("/api/blogs").send(blogWithNoUrl)
+		expect(response.statusCode).toBe(400)
+
+		const blogWithNoTitle = {
+			author: "who knows",
+			url: "www.google.com",
+			likes: 2
+		}
+
+		response = await api.post("/api/blogs").send(blogWithNoTitle)
+		expect(response.statusCode).toBe(400)
+	})
+
+})
+describe("deleting blog", () => {
+	test("with correct id works", async () => {
+		let getResponse = await api.get("/api/blogs")
+		expect(getResponse.statusCode).toBe(200)
+		const deletedBlog = getResponse.body[0]
+
+		const deleteResponse = await api.delete(`/api/blogs/${deletedBlog.id}`)
+		expect(deleteResponse.statusCode).toBe(204)
+
+		getResponse = await api.get("/api/blogs")
+		expect(getResponse.statusCode).toBe(200)
+		expect(getResponse.body).toHaveLength(initialBlogs.length - 1)
+	})
+
+	test("with incorrectly formatted id returns internal server error", async () => {
+		const deleteResponse = await api.delete("/api/blogs/123")
+		expect(deleteResponse.statusCode).toBe(500)
+	})
+
+	test("with correctly formatted but nonexisting id returns error message", async () => {
+		const deleteResponse = await api.delete("/api/blogs/123456789012345678901234")
+		expect(deleteResponse.statusCode).toBe(400)
+		expect(deleteResponse.body).toEqual({ "error": "Invalid id" })
+	})
 })
 
-test("blogs with no title or url get rejected", async () => {
-	const blogWithNoUrl = {
-		title: "hello",
-		author: "who knows",
-		likes: 2
-	}
+describe("updating blog", () => {
+	test("with correct id works", async () => {
+		let getResponse = await api.get("/api/blogs")
+		expect(getResponse.statusCode).toBe(200)
+		let updatedBlog = getResponse.body[0]
 
-	let response = await api.post("/api/blogs").send(blogWithNoUrl)
-	expect(response.statusCode).toBe(400)
+		updatedBlog.title = "updateTest"
+		updatedBlog.likes = updatedBlog.likes + 5
 
-	const blogWithNoTitle = {
-		author: "who knows",
-		url: "www.google.com",
-		likes: 2
-	}
+		const response = await api.put(`/api/blogs/${updatedBlog.id}`).send(updatedBlog)
+		expect(response.statusCode).toBe(204)
+	})
+	test("with incorrectly formatted id returns internal server error", async () => {
+		const putResponse = await api.put("/api/blogs/123")
+		expect(putResponse.statusCode).toBe(500)
+	})
 
-	response = await api.post("/api/blogs").send(blogWithNoTitle)
-	expect(response.statusCode).toBe(400)
+	test("with correctly formatted but nonexisting id returns error message", async () => {
+		const putResponse = await api.put("/api/blogs/123456789012345678901234")
+		expect(putResponse.statusCode).toBe(400)
+		expect(putResponse.body).toEqual({ "error": "Invalid id" })
+	})
 })
+
 
 afterAll(async () => {
 	await mongoose.connection.close()
