@@ -1,6 +1,7 @@
 const mongoose = require("mongoose")
 const express = require("express")
 const Blog = require("../models/blog.js")
+const User = require("../models/user.js")
 const supertest = require("supertest")
 const app = require("../app.js")
 app.use(express.json())
