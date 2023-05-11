@@ -1,4 +1,3 @@
-const mongoose = require("mongoose")
 const express = require("express")
 const User = require("../models/user.js")
 const supertest = require("supertest")
@@ -12,8 +11,8 @@ describe("adding user", () => {
 	beforeEach(async () => {
 		await User.deleteMany({})
     
-		const passwordHash = await bcrypt.hash("salaisuus", 10)
-		const user = new User({username:"root", name:"testing", password: passwordHash})
+		const passwordHash = await bcrypt.hash("supertest", 10)
+		const user = new User({username:"supertest", passwordHash: passwordHash})
         
 		await user.save()
 	})
@@ -60,7 +59,7 @@ describe("adding user", () => {
     
 	test("with existing username doesn't work", async() => {
 		const newUser = {
-			username: "root",
+			username: "supertest",
 			name:"hello",
 			password:"abcde"
 		}

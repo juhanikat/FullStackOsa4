@@ -8,6 +8,7 @@ app.use(express.json())
 
 const api = supertest(app)
 
+let token = null
 const initialBlogs = [
 	{
 		title: "test1",
@@ -24,11 +25,20 @@ const initialBlogs = [
 ]
 
 beforeEach(async () => {
+	const user = await User.findOne({username: "supertest"})
 	await Blog.deleteMany({})
 	let blogObject = new Blog(initialBlogs[0])
+	blogObject.user = user
 	await blogObject.save()
 	blogObject = new Blog(initialBlogs[1])
+	blogObject.user = user
 	await blogObject.save()
+
+	const loginResponse = await api
+		.post("/api/login")
+		.send({"username": "supertest", "password": "supertest"})
+	token = loginResponse.body.token
+	console.log(token)
 })
 
 test("blogs are returned as json", async () => {
@@ -51,22 +61,44 @@ test("blogs have id", async () => {
 		expect(blog.id).toBeDefined()
 	}
 })
-
-test("blogs can be added with post request", async () => {
-	const newBlog = {
-		title: "test3",
-		author: "someone",
-		url: "fake_url",
-		likes: 999
-	}
-	const postResponse = await api.post("/api/blogs").send(newBlog)
-	expect(postResponse.statusCode).toBe(201)
-
-
-	const getResponse = await api.get("/api/blogs")
-	expect(getResponse.statusCode).toBe(200)
-	expect(getResponse.body).toHaveLength(initialBlogs.length + 1)
+describe("adding blog", () => {
+	test("with valid token succeeds", async () => {
+		const newBlog = {
+			title: "test3",
+			author: "someone",
+			url: "fake_url",
+			likes: 999
+		}
+		const postResponse = await api
+			.post("/api/blogs")
+			.set("Authorization", token)
+			.send(newBlog)
+		console.log(postResponse)
+		expect(postResponse.statusCode).toBe(201)
+	
+		const getResponse = await api.get("/api/blogs")
+		expect(getResponse.statusCode).toBe(200)
+		expect(getResponse.body).toHaveLength(initialBlogs.length + 1)
+	})
+	
+	test("without token fails", async () => {
+		const newBlog = {
+			title: "test3",
+			author: "someone",
+			url: "fake_url",
+			likes: 999
+		}
+		const postResponse = await api
+			.post("/api/blogs")
+			.send(newBlog)
+		expect(postResponse.statusCode).toBe(401)
+	
+		const getResponse = await api.get("/api/blogs")
+		expect(getResponse.statusCode).toBe(200)
+		expect(getResponse.body).toHaveLength(initialBlogs.length)
+	})
 })
+
 describe("blogs with no", () => {
 	test("likes value have 0 likes", async () => {
 		const newBlog = {
@@ -107,7 +139,9 @@ describe("deleting blog", () => {
 		expect(getResponse.statusCode).toBe(200)
 		const deletedBlog = getResponse.body[0]
 
-		const deleteResponse = await api.delete(`/api/blogs/${deletedBlog.id}`)
+		const deleteResponse = await api
+			.delete(`/api/blogs/${deletedBlog.id}`)
+			.set("Authorization", token)
 		expect(deleteResponse.statusCode).toBe(204)
 
 		getResponse = await api.get("/api/blogs")
@@ -118,12 +152,20 @@ describe("deleting blog", () => {
 	test("with incorrectly formatted id returns internal server error", async () => {
 		const deleteResponse = await api.delete("/api/blogs/123")
 		expect(deleteResponse.statusCode).toBe(500)
+
+		const getResponse = await api.get("/api/blogs")
+		expect(getResponse.statusCode).toBe(200)
+		expect(getResponse.body).toHaveLength(initialBlogs.length)
 	})
 
 	test("with correctly formatted but nonexisting id returns error message", async () => {
 		const deleteResponse = await api.delete("/api/blogs/123456789012345678901234")
 		expect(deleteResponse.statusCode).toBe(400)
 		expect(deleteResponse.body).toEqual({ "error": "Invalid id" })
+
+		const getResponse = await api.get("/api/blogs")
+		expect(getResponse.statusCode).toBe(200)
+		expect(getResponse.body).toHaveLength(initialBlogs.length)
 	})
 })
 

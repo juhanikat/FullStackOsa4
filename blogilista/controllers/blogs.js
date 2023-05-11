@@ -1,10 +1,7 @@
 const express = require("express")
-const jwt = require("jsonwebtoken")
 const blogsRouter = express.Router()
 blogsRouter.use(express.json())
 const Blog = require("../models/blog.js")
-const User = require("../models/user.js")
-
 
 
 blogsRouter.get("/", async (request, response) => {
@@ -14,27 +11,17 @@ blogsRouter.get("/", async (request, response) => {
 
 blogsRouter.post("/", async (request, response) => {
 	if (!(request.body.title && request.body.url)) {
-		response.status(400).json({error: "no title or url"})
-		return
+		return response.status(400).json({error: "no title or url"})
+		
 	}
 	if (!(request.body.likes)) {
 		request.body.likes = 0
 	}
 
-	let decodedToken = null
-	try {
-		decodedToken = jwt.verify(request.body.token, process.env.SECRET) 
-		
-	} catch(error) {
-		console.log(error)
-		if (error.name === "JsonWebTokenError") {
-			return response.status(400).json({ error: "token missing or invalid" })
-		}}
-
-	if (!decodedToken.id) {   
-		return response.status(401).json({ error: "token invalid" }) 
-	}  
-	const user = await User.findById(decodedToken.id)
+	const user = request.body.user
+	if (!(user)) {
+		return response.status(401).json({error: "Invalid user"})
+	}
 	const blog = new Blog(request.body)
 	blog.user = user
 	const result = await blog.save()
@@ -63,28 +50,18 @@ blogsRouter.delete("/:id", async (request, response) => {
 	try {
 		deletedBlog = await Blog.findById(request.params.id)
 		if (!(deletedBlog)) {
-			response.status(400).send({ "error": "Invalid id" }).end()
-			return
+			return response.status(400).send({ "error": "Invalid id" })
+			
 		}	
 	} catch (error) {
 		console.log(error)
-		response.status(500).end()
+		return response.status(500).end()
 	}
 
-	let decodedToken = null
-	try {
-		decodedToken = jwt.verify(request.body.token, process.env.SECRET) 
-	} catch(error) {
-		console.log(error)
-		if (error.name === "JsonWebTokenError") {
-			return response.status(400).json({ error: "token missing or invalid" })
-		}}
-
-	if (!decodedToken.id) {   
-		return response.status(401).json({ error: "token invalid" }) 
+	const user = request.body.user
+	if(!(user)) {
+		return response.status(401).send({error: "Invalid user"})
 	}
-
-	const user = await User.findById(decodedToken.id)
 	if (!(deletedBlog.user.toString() === user.id.toString())) {
 		console.log(deletedBlog.user.toString(), user.id.toString())
 		return response.status(400).json({ error: "wrong account" })
