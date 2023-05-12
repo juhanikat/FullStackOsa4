@@ -2,21 +2,28 @@ const express = require("express")
 const User = require("../models/user.js")
 const supertest = require("supertest")
 const app = require("../app.js")
-const bcrypt = require("bcrypt")
+const mongoose = require("mongoose")
 app.use(express.json())
 
 const api = supertest(app)
 
 describe("adding user", () => {
 	beforeEach(async () => {
-		await User.deleteMany({})
-    
-		const passwordHash = await bcrypt.hash("supertest", 10)
-		const user = new User({username:"supertest", passwordHash: passwordHash})
-        
-		await user.save()
+		await User.deleteMany({username:{"$ne": "supertest"}})
 	})
     
+	test("with correct parameters works", async () => {
+		let newUser = {
+			username: "hello",
+			name:"moi",
+			password:"abcde"
+		}
+		const postResponse = await api.post("/api/users").send(newUser)
+		expect(postResponse.statusCode).toBe(201)
+		const getResponse = await api.get("/api/users")
+		expect(getResponse.body).toHaveLength(2)
+	})
+
 	test("with no username or password doesn't work", async() => {
 		let newUser = {
 			name:"hello",
@@ -67,4 +74,7 @@ describe("adding user", () => {
 		expect(response.statusCode).toBe(400)
 		expect(response.body.error).toEqual("username already exists")
 	})
+})
+afterAll(async () => {
+	await mongoose.connection.close()
 })

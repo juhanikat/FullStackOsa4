@@ -6,18 +6,16 @@ const Blog = require("../models/blog.js")
 
 blogsRouter.get("/", async (request, response) => {
 	const blogs = await Blog.find({}).populate("user", {username: 1, name: 1, id: 1})
-	response.json(blogs)
+	return response.json(blogs)
 })
 
 blogsRouter.post("/", async (request, response) => {
 	if (!(request.body.title && request.body.url)) {
 		return response.status(400).json({error: "no title or url"})
-		
 	}
 	if (!(request.body.likes)) {
 		request.body.likes = 0
 	}
-
 	const user = request.body.user
 	if (!(user)) {
 		return response.status(401).json({error: "Invalid user"})
@@ -27,7 +25,7 @@ blogsRouter.post("/", async (request, response) => {
 	const result = await blog.save()
 	user.blogs = user.blogs.concat(blog._id)
 	await user.save()
-	response.status(201).json(result)
+	return response.status(201).json(result)
 })
 
 blogsRouter.put("/:id", async (request, response) => {
@@ -35,13 +33,13 @@ blogsRouter.put("/:id", async (request, response) => {
 		const newBlog = request.body
 		const updatedBlog = await Blog.findByIdAndUpdate(request.params.id, newBlog)
 		if (updatedBlog) {
-			response.status(204).end()
+			return response.status(204).end()
 		} else {
-			response.status(400).send({ "error": "Invalid id" }).end()
+			return response.status(400).send({ "error": "Invalid id" }).end()
 		}
 	} catch (error) {
 		console.log(error)
-		response.status(500).end()
+		return response.status(500).end()
 	}
 })
 
@@ -63,7 +61,6 @@ blogsRouter.delete("/:id", async (request, response) => {
 		return response.status(401).send({error: "Invalid user"})
 	}
 	if (!(deletedBlog.user.toString() === user.id.toString())) {
-		console.log(deletedBlog.user.toString(), user.id.toString())
 		return response.status(400).json({ error: "wrong account" })
 	}
 	await Blog.deleteOne(deletedBlog)

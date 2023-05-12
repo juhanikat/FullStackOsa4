@@ -37,30 +37,33 @@ beforeEach(async () => {
 	const loginResponse = await api
 		.post("/api/login")
 		.send({"username": "supertest", "password": "supertest"})
-	token = loginResponse.body.token
+	token = "Bearer " + loginResponse.body.token
 	console.log(token)
 })
 
-test("blogs are returned as json", async () => {
-	await api
-		.get("/api/blogs")
-		.expect(200)
-		.expect("Content-Type", /application\/json/)
+describe("when getting blogs", () => {
+	test("they are returned as json", async () => {
+		await api
+			.get("/api/blogs")
+			.expect(200)
+			.expect("Content-Type", /application\/json/)
+	})
+	
+	test("right amount of blogs are returned", async () => {
+		const response = await api.get("/api/blogs")
+		expect(response.statusCode).toBe(200)
+		expect(response.body).toHaveLength(initialBlogs.length)
+	})
+	
+	test("blogs have id", async () => {
+		const response = await api.get("/api/blogs")
+		expect(response.statusCode).toBe(200)
+		for (const blog of response.body) {
+			expect(blog.id).toBeDefined()
+		}
+	})
 })
 
-test("right amount of blogs are returned", async () => {
-	const response = await api.get("/api/blogs")
-	expect(response.statusCode).toBe(200)
-	expect(response.body).toHaveLength(initialBlogs.length)
-})
-
-test("blogs have id", async () => {
-	const response = await api.get("/api/blogs")
-	expect(response.statusCode).toBe(200)
-	for (const blog of response.body) {
-		expect(blog.id).toBeDefined()
-	}
-})
 describe("adding blog", () => {
 	test("with valid token succeeds", async () => {
 		const newBlog = {
@@ -107,7 +110,9 @@ describe("blogs with no", () => {
 			url: "fake_url"
 		}
 
-		const response = await api.post("/api/blogs").send(newBlog)
+		const response = await api.post("/api/blogs")
+			.set("Authorization", token)
+			.send(newBlog)
 		expect(response.body.likes).toBeDefined()
 		expect(response.body.likes).toBe(0)
 	})
@@ -178,7 +183,9 @@ describe("updating blog", () => {
 		updatedBlog.title = "updateTest"
 		updatedBlog.likes = updatedBlog.likes + 5
 
-		const response = await api.put(`/api/blogs/${updatedBlog.id}`).send(updatedBlog)
+		const response = await api.put(`/api/blogs/${updatedBlog.id}`)
+			.set("authorization", token)
+			.send(updatedBlog)
 		expect(response.statusCode).toBe(204)
 	})
 	test("with incorrectly formatted id returns internal server error", async () => {
